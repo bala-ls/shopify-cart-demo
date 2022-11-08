@@ -23,6 +23,7 @@
                 <div class="totals">
                   <h2 class="totals__subtotal">{{ 'sections.cart.subtotal' | t }}</h2>
                   <p class="totals__subtotal-value">{{ cart.total_price | money_with_currency }}</p>
+                  <input type="hidden" class="cart_total_price" value="{{ cart.total_price }}"/>
                 </div>
 
                 <div>

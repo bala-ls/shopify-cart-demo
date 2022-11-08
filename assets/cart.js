@@ -25,6 +25,9 @@ class CartItems extends HTMLElement {
     }, 300);
 
     this.addEventListener('change', this.debouncedOnChange.bind(this));
+
+    // Custom Functionality for adding or removing gift products in cart.
+    this.checkGiftToAdd();
   }
 
   onChange(event) {
@@ -57,6 +60,7 @@ class CartItems extends HTMLElement {
   }
 
   updateQuantity(line, quantity, name) {
+    this.showOverlay();
     this.enableLoading(line);
 
     const body = JSON.stringify({
@@ -96,11 +100,13 @@ class CartItems extends HTMLElement {
           trapFocus(cartDrawerWrapper, document.querySelector('.cart-item__name'))
         }
         this.disableLoading();
+        this.checkGiftToAdd();
       }).catch(() => {
         this.querySelectorAll('.loading-overlay').forEach((overlay) => overlay.classList.add('hidden'));
         const errors = document.getElementById('cart-errors') || document.getElementById('CartDrawer-CartErrors');
         errors.textContent = window.cartStrings.error;
         this.disableLoading();
+
       });
   }
 
@@ -149,6 +155,117 @@ class CartItems extends HTMLElement {
   disableLoading() {
     const mainCartItems = document.getElementById('main-cart-items') || document.getElementById('CartDrawer-CartItems');
     mainCartItems.classList.remove('cart__items--disabled');
+  }
+
+  checkGiftToAdd(){
+    /* Adding Needed Gift Products and removing Not needed gifts from cart start */
+    this.showOverlay();
+    if($('.yet_to_be_added_products').length > 0){
+      this.addGiftProduct();
+    }
+    if($('.yet_to_be_remove_products').length > 0){
+      this.removeGiftProduct();
+    }
+    if($('.yet_to_be_remove_products').length == 0 && $('.yet_to_be_added_products').length == 0){
+      this.removeOverlay();
+    }
+
+    /* Adding Needed Gift Products and removing Not needed gifts from cart end */
+    var percentage = (parseFloat($(".cart_total_price").val()) / 240000)*100;
+    if(percentage>100){
+      percentage = 100;
+    }
+    this.move(percentage);
+  }
+
+  move(limit) {
+    var elem = document.getElementById("myBar");
+    var width = 1;
+    var id = setInterval(frame, 10);
+    function frame() {
+      if (width >= limit) {
+        clearInterval(id);
+      } else {
+        width++;
+        elem.style.width = width + '%';
+      }
+    }
+  }
+
+  addGiftProduct(){
+    const this_ = this;
+    var items = [];
+    // Get all the to add products generated via liquid and forming input to add the product to cart.
+
+    $.each($('.yet_to_be_added_products'),function(index,val){
+      var formBody = {
+        'id': $(this).val(),
+        'quantity': 1
+      }
+      items.push(formBody);
+    });
+    
+    if(items.length > 0){
+      this.changeCart("/cart/add.js?"+this_.getSectionsURL(),"POST",{items:items});
+    }
+  }
+  removeGiftProduct(){
+    const this_ = this;
+    var items = {};
+    // Get all the to add products generated via liquid and forming input to add the product to cart.
+
+    $.each($('.yet_to_be_remove_products'),function(index,val){
+      var variantId = $(this).val();
+      items[variantId] = 0;
+    });
+    if(Object.keys(items).length > 0){
+      this.changeCart("/cart/update.js?"+this_.getSectionsURL(),"POST",{updates:items});
+    }
+  }
+
+  getSectionsURL(){
+    // Common place to return all the cart section need to be rendered.
+    // Max 5 sections can be passed.
+    return "sections="+document.getElementById('main-cart-items').dataset.id+",cart-icon-bubble,cart-live-region-text,"+document.getElementById('main-cart-footer').dataset.id+"&sections_url=/";    
+  }
+
+  changeCart(cartURL,method,formBody,callBack){
+    const this_ = this;
+    $.ajax({
+      type: method,
+      url: cartURL,
+      data: formBody,
+      dataType: 'json',
+      success: function (data) {
+        this_.refreshCart(data);
+      },
+      error:function(data) {
+        console.log("Error while changing cart");
+      }
+    });
+
+  }
+
+  showOverlay(){
+    $(".full-overlay").show();
+    $(".cart__items .js-contents").addClass("load");
+    $("body").css("overflow","hidden");
+  }
+
+  removeOverlay(){
+    $(".full-overlay").hide();
+    $(".cart__items .js-contents").removeClass("load");
+    $("body").css("overflow","inherit");
+  }
+
+  refreshCart(parsedState){
+    this.getSectionsToRender().forEach((section => {
+      const elementToReplace =
+        document.getElementById(section.id).querySelector(section.selector) || document.getElementById(section.id);
+      elementToReplace.innerHTML =
+        this.getSectionInnerHTML(parsedState.sections[section.section], section.selector);
+    }));
+    this.removeOverlay();
   }
 }
 
