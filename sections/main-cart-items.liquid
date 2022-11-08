@@ -23,7 +23,31 @@
   <script src="{{ 'cart.js' | asset_url }}" defer="defer"></script>
 {%- endunless -%}
 
+<div class="full-overlay">
+    <div class="full-overlay__inner">
+        <div class="full-overlay__content"><span class="full-spinner"></span></div>
+    </div>
+</div>
 <cart-items class="page-width{% if cart == empty %} is-empty{% else %} section-{{ section.id }}-padding{% endif %}">
+  <div id="myProgress">
+    <div id="myBar"> </div>
+  </div>
+  <div class="progress-container" data-percentage='70'>
+    <div class="progress"></div>
+  </div>
+  <div class="In-progress-content">
+    <div>
+    </div>
+    <div>
+      <p>Free Gift</p>
+    </div>
+    <div>
+      <p>Free Gift</p>
+    </div>
+    <div>
+      <p>Free Gift</p>
+    </div>
+  </div>
   <div class="title-wrapper-with-link">
     <h1 class="title title--primary">{{ 'sections.cart.title' | t }}</h1>
     <a href="{{ routes.all_products_collection_url }}" class="underlined-link">{{ 'general.continue_shopping' | t }}</a>
@@ -45,8 +69,60 @@
 
   <form action="{{ routes.cart_url }}" class="cart__contents critical-hidden" method="post" id="cart">
     <div class="cart__items" id="main-cart-items" data-id="{{ section.id }}">
-      <div class="js-contents">
+      <div class="js-contents load">
         {%- if cart != empty -%}
+          {%- assign firstFreeProductId = 42884244308136 -%}
+          {%- assign secondFreeProductId = 42884247453864 -%}
+          {%- assign thirdFreeProductId = 42884248109224 -%}
+          {%- assign cartAddedProducts = '' -%}
+          {%- assign toBeAddedProducts = '' -%}
+
+          <input type="hidden" class="cart_total" value="{{cart.total_price}}"/>
+          {% for item in cart.items %}
+            {% if item.variant_id == firstFreeProductId or item.variant_id == secondFreeProductId or item.variant_id == thirdFreeProductId %}
+              {%- assign cartAddedProducts = item.variant_id | append:',' | append: cartAddedProducts -%}
+              <input type="hidden" class="added_product_ids" value="{{item.product.id}}"/>
+            {% endif %}
+          {% endfor %}
+
+          {%- if cart.total_price > 99900 -%}
+            {%- assign toBeAddedProducts = firstFreeProductId | append:',' -%}
+            {%- if cart.total_price > 150000 -%}
+              {%- assign toBeAddedProducts = secondFreeProductId | append:',' | append: toBeAddedProducts -%}
+              {%- if cart.total_price > 200000 -%}
+                {%- assign toBeAddedProducts = thirdFreeProductId | append:',' | append: toBeAddedProducts -%}
+              {%- endif -%}
+            {%- endif -%}
+          {%- endif -%}
+
+          <input type="hidden" class="already_added" value="{{cartAddedProducts}}"/>
+          <input type="hidden" class="to_be_added" value="{{toBeAddedProducts}}"/>
+
+          {% liquid
+            assign cartAddedProducts = cartAddedProducts | split: ',' | uniq
+            assign toBeAddedProducts = toBeAddedProducts | split: ',' | uniq
+            for cartProduct in cartAddedProducts
+              assign cartProduct = cartProduct | plus:0 
+            endfor
+            for addProduct in toBeAddedProducts
+              assign addProduct = addProduct | plus:0 
+            endfor
+          %}
+
+          {% for cartProduct in cartAddedProducts %}
+            {% assign cartProduct = cartProduct %}
+            {% unless toBeAddedProducts contains cartProduct %} 
+              <input type="hidden" class="yet_to_be_remove_products" value="{{cartProduct}}"/>
+            {% endunless %} 
+          {% endfor %}
+
+          {% for addProduct in toBeAddedProducts %}
+            {%- assign addProduct = addProduct | plus:0 -%}
+            {% unless cartAddedProducts contains addProduct %}
+              <input type="hidden" class="yet_to_be_added_products" value="{{addProduct}}"/>
+            {% endunless %}
+          {% endfor %}
+
           <table class="cart-items">
             <caption class="visually-hidden">{{ 'sections.cart.title' | t }}</caption>
             <thead>
